@@ -1,122 +1,106 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useRef, useState } from "react";
+import { get, set } from "idb-keyval";
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
+const KEY = "sounds";
+
+export default function App() {
+  const [sounds, setSounds] = useState([]); // {id, name, blob}
+  const [playing, setPlaying] = useState(new Set());
+  const [edit, setEdit] = useState(false);
+  const players = useRef(new Map());
+
+  useEffect(() => {
+    get(KEY).then((s) => s && setSounds(s));
+  }, []);
+
+  const save = (next) => {
+    setSounds(next);
+    set(KEY, next);
+  };
+
+  const setFlag = (id, on) =>
+    setPlaying((p) => {
+      const n = new Set(p);
+      on ? n.add(id) : n.delete(id);
+      return n;
+    });
+
+  const getPlayer = (s) => {
+    let a = players.current.get(s.id);
+    if (!a) {
+      a = new Audio(URL.createObjectURL(s.blob));
+      a.onended = () => setFlag(s.id, false);
+      players.current.set(s.id, a);
+    }
+    return a;
+  };
+
+  const toggle = (s) => {
+    const a = getPlayer(s);
+    if (a.paused) {
+      a.play();
+      setFlag(s.id, true);
+    } else {
+      a.pause();
+      a.currentTime = 0;
+      setFlag(s.id, false);
+    }
+  };
+
+  const addFiles = (e) => {
+    const added = [...e.target.files].map((f) => ({
+      id: crypto.randomUUID(),
+      name: f.name.replace(/\.[^.]+$/, ""),
+      blob: f,
+    }));
+    save([...sounds, ...added]);
+    e.target.value = "";
+  };
+
+  const remove = (s) => {
+    if (!confirm(`Eliminare "${s.name}"?`)) return;
+    players.current.get(s.id)?.pause();
+    players.current.delete(s.id);
+    save(sounds.filter((x) => x.id !== s.id));
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+    <main>
+      <header>
+        <label className="btn">
+          + Aggiungi
+          <input
+            type="file"
+            accept="audio/*"
+            multiple
+            hidden
+            onChange={addFiles}
+          />
+        </label>
+        <button className="btn" onClick={() => setEdit(!edit)}>
+          {edit ? "Fatto" : "Modifica"}
         </button>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
+      {!sounds.length && (
+        <p className="empty">Nessun suono. Premi "+ Aggiungi".</p>
+      )}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <div className="grid">
+        {sounds.map((s) => (
+          <button
+            key={s.id}
+            className={
+              "pad" + (playing.has(s.id) ? " on" : "") + (edit ? " edit" : "")
+            }
+            onClick={() => (edit ? remove(s) : toggle(s))}
+          >
+            {edit && "🗑 "}
+            {s.name}
+          </button>
+        ))}
+      </div>
+    </main>
+  );
 }
-
-export default App
