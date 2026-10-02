@@ -8,6 +8,7 @@ export default function App() {
   const [sounds, setSounds] = useState([]); // {id, name, blob}
   const [playing, setPlaying] = useState(new Set());
   const [edit, setEdit] = useState(false);
+  const [mode, setMode] = useState("delete"); // "delete" | "rename"
   const players = useRef(new Map());
 
   useEffect(() => {
@@ -65,6 +66,17 @@ export default function App() {
     save(sounds.filter((x) => x.id !== s.id));
   };
 
+  const rename = (s) => {
+    const name = prompt("Nuovo nome:", s.name)?.trim();
+    if (!name || name === s.name) return;
+    save(sounds.map((x) => (x.id === s.id ? { ...x, name } : x)));
+  };
+
+  const toggleEdit = () => {
+    setEdit(!edit);
+    setMode("delete"); // ogni volta si riparte da "Cancella"
+  };
+
   return (
     <main>
       <header>
@@ -78,10 +90,27 @@ export default function App() {
             onChange={addFiles}
           />
         </label>
-        <button className="btn" onClick={() => setEdit(!edit)}>
+        <button className="btn" onClick={toggleEdit}>
           {edit ? "Fatto" : "Modifica"}
         </button>
       </header>
+
+      {edit && (
+        <div className="modes">
+          <button
+            className={"btn" + (mode === "delete" ? " active" : "")}
+            onClick={() => setMode("delete")}
+          >
+            🗑 Cancella
+          </button>
+          <button
+            className={"btn" + (mode === "rename" ? " active" : "")}
+            onClick={() => setMode("rename")}
+          >
+            ✏️ Rinomina
+          </button>
+        </div>
+      )}
 
       {!sounds.length && (
         <p className="empty">Nessun suono. Premi "+ Aggiungi".</p>
@@ -92,11 +121,15 @@ export default function App() {
           <button
             key={s.id}
             className={
-              "pad" + (playing.has(s.id) ? " on" : "") + (edit ? " edit" : "")
+              "pad" +
+              (playing.has(s.id) ? " on" : "") +
+              (edit ? " edit " + mode : "")
             }
-            onClick={() => (edit ? remove(s) : toggle(s))}
+            onClick={() =>
+              edit ? (mode === "delete" ? remove(s) : rename(s)) : toggle(s)
+            }
           >
-            {edit && "🗑 "}
+            {edit && (mode === "delete" ? "🗑 " : "✏️ ")}
             {s.name}
           </button>
         ))}

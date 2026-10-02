@@ -167,7 +167,7 @@
 
   &::before,
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     top: -4.5px;
     border: 5px solid transparent;
@@ -180,5 +180,19 @@
   &::after {
     right: 0;
     border-right-color: var(--border);
+  }
+  .modes {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .modes .btn {
+    flex: 1;
+  }
+  .btn.active {
+    background: #e11d48;
+  }
+  .pad.edit.rename {
+    outline-color: #3b82f6;
   }
 }
