@@ -4,12 +4,15 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: "/soundboard/",
+  base: "/",
   plugins: [
     react(),
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
+        id: "/",
+        scope: "/",
+        start_url: "/",
         name: "Soundboard",
         short_name: "Soundboard",
         display: "standalone",
